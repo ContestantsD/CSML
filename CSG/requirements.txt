@@ -1,0 +1,8 @@
+numpy
+tqdm
+trimesh
+triangle
+sortedcollections
+networkx
+rtree
+vtk

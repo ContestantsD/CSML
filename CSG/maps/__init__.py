@@ -1,0 +1,1 @@
+from .maps_novel import MAPS
