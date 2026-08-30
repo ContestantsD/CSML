@@ -201,9 +201,13 @@
 | `--lh-dir` | yes | — | left-hemisphere offline feature directory |
 | `--rh-dir` | yes | — | right-hemisphere offline feature directory |
 | `--cohort-dir` | yes | — | cohort directory (`cohort.csv` / `splits.csv`) |
-| `--out-dir` | yes | — | output directory |
 | `--phenotype` | yes | — | phenotype column the checkpoints were trained on |
-| `--ckpt-template` | yes | — | checkpoint path template containing `{seed}` |
+| `--ckpt-template` | yes | — | checkpoint directory template containing `{seed}` and `{phenotype}` |
+| `--ckpt-name` | no | `ckpt.pt` | checkpoint filename inside each template directory |
+| `--out-dir` | yes | — | output directory |
+| `--seeds` | no | `1 11 16` | split seeds to run (one IG pass per seed) |
+| `--batch` | no | `8` | batch size |
+| `--steps` | no | `64` | IG integration steps |
 
 ## `map_ig_to_32k_vtk.py`
 
