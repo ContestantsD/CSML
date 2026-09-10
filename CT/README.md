@@ -130,6 +130,7 @@
 | `--patch-size` | no | `64` | vertices per patch |
 | `--channels` | no | `10` | input feature channels |
 | `--drop-path` | no | `0.1` | drop-path rate |
+| `--branch-scales` | no | `1.0,1.368` | fixed per-branch output rescale (s_LH, s_RH) that equalizes the pretrained encoders' backward-gain asymmetry at init (default measured from the released b1024 geodesic+NaN encoders; performance-neutral over 28 phenotypes x 3 splits; `off` disables; remeasure for a different encoder pair) |
 
 ## `train_fc.py`
 

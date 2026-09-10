@@ -23,6 +23,14 @@ from dataset_paired_offline import PairedOfflineFeatureDataset
 
 _fusion_mlp = None
 _PROBE_ONLY = False
+# Fixed per-branch output rescale (s_LH, s_RH) applied before the fusion MLP.
+# The separately pretrained hemisphere encoders carry an arbitrary backward-gain
+# asymmetry (the LH/RH attribution split is an unconstrained reparameterization:
+# equalizing or muting it leaves test PCC unchanged), which otherwise shows up
+# as a ~2:1 attribution-mass imbalance in the downstream model.  Rescaling the
+# RH branch by the measured gain ratio equalizes the two branches at init.
+# Performance-neutral: validated over 28 phenotypes x 3 splits (mean dPCC ~ 0).
+_BRANCH_SCALES = None
 from meshmae_regressor import Mesh_regressor
 
 
@@ -207,6 +215,9 @@ def forward_pairs(nets, inputs):
     lf2, lf, lc, lcd, lhop, rf2, rf, rc, rcd, rhop = inputs
     fl = nets[0](lf2, lf, lc, lcd, lhop)
     fr = nets[1](rf2, rf, rc, rcd, rhop)
+    if _BRANCH_SCALES is not None:
+        fl = fl * _BRANCH_SCALES[0]
+        fr = fr * _BRANCH_SCALES[1]
     return _fusion_mlp(torch.cat([fl, fr], dim=1))
 
 
@@ -293,6 +304,12 @@ def main():
     ap.add_argument("--patch-size", type=int, default=64)
     ap.add_argument("--channels", type=int, default=10)
     ap.add_argument("--drop-path", type=float, default=0.1)
+    ap.add_argument("--branch-scales", type=str, default="1.0,1.368",
+                    help="fixed per-branch output rescale s0,s1 that equalizes the pretrained "
+                         "encoders' backward-gain asymmetry at init; default is the ratio measured "
+                         "from the released b1024 geodesic+NaN dual-path encoders (validated "
+                         "performance-neutral over 28 phenotypes x 3 splits). 'off'/'none' disables; "
+                         "remeasure for a different encoder pair")
     args = ap.parse_args()
     global HCP_LH_DIR, HCP_RH_DIR, COHORT_DIR
     HCP_LH_DIR, HCP_RH_DIR, COHORT_DIR = args.lh_dir, args.rh_dir, args.cohort_dir
@@ -354,6 +371,15 @@ def main():
         nn.Linear(args.embed_dim * 2, 128), nn.ReLU(), nn.Linear(128, 1)
     ).to(device)
     print(f"[fusion] concat MLP: {sum(p.numel() for p in _fusion_mlp.parameters())} params", flush=True)
+
+    global _BRANCH_SCALES
+    if args.branch_scales.strip().lower() in ("", "off", "none"):
+        _BRANCH_SCALES = None
+        print("[branch-scales] disabled", flush=True)
+    else:
+        _BRANCH_SCALES = tuple(float(v) for v in args.branch_scales.split(","))
+        assert len(_BRANCH_SCALES) == 2, "--branch-scales needs exactly two values"
+        print(f"[branch-scales] fixed output rescale {_BRANCH_SCALES}", flush=True)
 
     crit = HuberLoss()
 
@@ -540,6 +566,7 @@ def main():
         "experiment_id": run_name, "split_seed": args.seed,
         "phenotype":     args.phenotype,
         "fusion": "concat_mlp",
+        "branch_scales": list(_BRANCH_SCALES) if _BRANCH_SCALES else None,
         "n_test": len(y_t), "pcc": float(pcc), "p_raw_pcc": float(p_raw),
         "cod": cod, "standardized_rmse": srmse,
         "best_epoch": best_epoch, "best_phase": best_phase, "best_val_huber": best_val_huber,
