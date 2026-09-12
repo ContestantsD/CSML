@@ -185,6 +185,8 @@
 
 ## `train_ados.py`
 
+Two-stage transfer under leave-one-site-out evaluation: the frozen encoder and the progressively finetuned encoder (head-only probe, then LayerNorm and perspective-transform parameters of the last two blocks under a differentiable readout) are both read out by the same moment-alignment + RBF-SVR chain, and the stage is selected on a rotating inner validation site; `--probe-only` keeps the frozen-only pipeline.
+
 | Parameter | Required | Default | Description |
 |---|---|---|---|
 | `--ckpt-lh` | yes | — | path to the pretrained left-hemisphere encoder checkpoint |
@@ -194,6 +196,8 @@
 | `--label-dir` | yes | — | label directory (`labels.npy` / `subject_ids.npy`) |
 | `--out-dir` | yes | — | output directory |
 | `--nan` | no | off | apply NAN normalization to encoder inputs (stats from each fold's training subjects) |
+| `--probe-only` | no | off | skip the finetune stage (frozen readout only) |
+| `--smoke` | no | off | quick check: first held-out site only, 3 epochs per stage |
 
 ## `compute_ig.py`
 
